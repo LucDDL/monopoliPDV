@@ -1,0 +1,186 @@
+<!-- banco.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nomópolis - Banco</title>
+    <link
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    />
+    <style>
+      .card-metric {
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+      }
+      .card-metric.green {
+        background-color: #28a745;
+      }
+      .card-metric.red {
+        background-color: #dc3545;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container mt-5">
+      <header class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Nomópolis - Banco</h1>
+        <button id="logout-btn" class="btn btn-danger">Logout</button>
+      </header>
+
+      <section id="interface-banco">
+        <h2 class="text-center mt-4">
+          Bem-vindo ao Banco, <span id="user-name-banco"></span>
+        </h2>
+        <div id="banco-info" class="text-center mt-4">
+          <div id="saldo-banco-card" class="card-metric green">
+            <h3>
+              <i class="fas fa-dollar-sign"></i> Saldo do Banco:
+              <span id="saldo-banco"></span>
+            </h3>
+          </div>
+          <div id="meu-saldo-card" class="card-metric green">
+            <h3>
+              <i class="fas fa-dollar-sign"></i> Meu Saldo:
+              <span id="meu-saldo"></span>
+            </h3>
+          </div>
+          <div id="jogadores-lista" class="mt-3"></div>
+        </div>
+      </section>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-firestore.js"></script>
+    <script>
+      // Configuração do Firebase
+      var firebaseConfig = {
+        apiKey: "AIzaSyCFBuasmdRyUtMd6fVMYkMvk9d-kDbXDTI",
+        authDomain: "monopoliweb-bbbb0.firebaseapp.com",
+        projectId: "monopoliweb-bbbb0",
+        storageBucket: "monopoliweb-bbbb0.appspot.com",
+        messagingSenderId: "239872388458",
+        appId: "1:239872388458:web:4f4b62b4a2a80ce3964913",
+        measurementId: "G-8S37SYM7C7",
+      };
+      firebase.initializeApp(firebaseConfig);
+      var db = firebase.firestore();
+      var auth = firebase.auth();
+
+      var currentUser;
+
+      // Observador de estado de autenticação
+      auth.onAuthStateChanged(function (user) {
+        if (user) {
+          currentUser = user;
+          carregarDadosBanco(user.uid);
+          document.getElementById("user-name-banco").textContent =
+            user.displayName;
+        } else {
+          window.location.href = "index.html";
+        }
+      });
+
+      // Função para carregar dados do banco
+      function carregarDadosBanco(uid) {
+        db.collection("jogadores")
+          .doc(uid)
+          .get()
+          .then((doc) => {
+            if (doc.exists) {
+              var jogador = doc.data();
+              atualizarSaldos(jogador.saldo);
+              carregarJogadores();
+            }
+          });
+      }
+
+      // Função para atualizar os saldos
+      function atualizarSaldos(saldo) {
+        var saldoBancoElement = document.getElementById("saldo-banco");
+        var meuSaldoElement = document.getElementById("meu-saldo");
+        saldoBancoElement.textContent = saldo;
+        meuSaldoElement.textContent = saldo;
+
+        var saldoBancoCard = document.getElementById("saldo-banco-card");
+        var meuSaldoCard = document.getElementById("meu-saldo-card");
+
+        if (saldo < 350) {
+          saldoBancoCard.classList.remove("green");
+          saldoBancoCard.classList.add("red");
+          meuSaldoCard.classList.remove("green");
+          meuSaldoCard.classList.add("red");
+        } else {
+          saldoBancoCard.classList.remove("red");
+          saldoBancoCard.classList.add("green");
+          meuSaldoCard.classList.remove("red");
+          meuSaldoCard.classList.add("green");
+        }
+      }
+
+      // Função para carregar lista de jogadores
+      function carregarJogadores() {
+        db.collection("jogadores")
+          .where("isBanco", "==", false)
+          .get()
+          .then((querySnapshot) => {
+            var jogadoresLista = document.getElementById("jogadores-lista");
+            jogadoresLista.innerHTML = "";
+            querySnapshot.forEach((doc) => {
+              var jogador = doc.data();
+              jogadoresLista.innerHTML += `<div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>${jogador.nome}</span>
+                        <button class="btn btn-primary" onclick="pagarJogador('${doc.id}')">Pagar</button>
+                    </div>`;
+            });
+          });
+      }
+
+      // Função para realizar pagamento
+      function pagarJogador(id) {
+        var valor = prompt("Valor a pagar:");
+        if (valor) {
+          valor = parseFloat(valor);
+          db.collection("jogadores")
+            .doc(currentUser.uid)
+            .update({
+              saldo: firebase.firestore.FieldValue.increment(-valor),
+            })
+            .then(function () {
+              db.collection("jogadores")
+                .doc(id)
+                .update({
+                  saldo: firebase.firestore.FieldValue.increment(valor),
+                })
+                .then(function () {
+                  carregarDadosBanco(currentUser.uid);
+                });
+            });
+        }
+      }
+
+      // Função para logout
+      document
+        .getElementById("logout-btn")
+        .addEventListener("click", function () {
+          auth.signOut().then(() => {
+            window.location.href = "index.html";
+          });
+        });
+
+      // Expor a função pagarJogador globalmente
+      window.pagarJogador = pagarJogador;
+    </script>
+  </body>
+</html>

@@ -1,0 +1,112 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nomópolis - Login</title>
+    <link
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container mt-5">
+      <h1 class="text-center">Nomópolis - Login</h1>
+
+      <!-- Tela de Login -->
+      <section id="login-section" class="text-center mt-4">
+        <div class="form-group">
+          <input
+            type="text"
+            id="jogadorNome"
+            class="form-control"
+            placeholder="Nome do Jogador"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <select id="jogadorTipo" class="form-control">
+            <option value="normal">Jogador Normal</option>
+            <option value="banco">Banco</option>
+          </select>
+        </div>
+        <button id="login-btn" class="btn btn-primary">
+          Login with Google
+        </button>
+      </section>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-firestore.js"></script>
+    <script>
+      // Configuração do Firebase
+      var firebaseConfig = {
+        apiKey: "AIzaSyCFBuasmdRyUtMd6fVMYkMvk9d-kDbXDTI",
+        authDomain: "monopoliweb-bbbb0.firebaseapp.com",
+        projectId: "monopoliweb-bbbb0",
+        storageBucket: "monopoliweb-bbbb0.appspot.com",
+        messagingSenderId: "239872388458",
+        appId: "1:239872388458:web:4f4b62b4a2a80ce3964913",
+        measurementId: "G-8S37SYM7C7",
+      };
+      firebase.initializeApp(firebaseConfig);
+      var db = firebase.firestore();
+      var auth = firebase.auth();
+
+      var currentUser;
+
+      // Função para registrar jogador
+      function registrarJogador(user) {
+        var nome = document.getElementById("jogadorNome").value;
+        var tipo = document.getElementById("jogadorTipo").value;
+        var saldoInicial = tipo === "banco" ? 15000 : 0;
+        db.collection("jogadores")
+          .doc(user.uid)
+          .set({
+            nome: nome,
+            tipo: tipo,
+            saldo: saldoInicial,
+            isBanco: tipo === "banco",
+          })
+          .then(function () {
+            if (tipo === "banco") {
+              window.location.href = "banco.html";
+            } else {
+              window.location.href = "carteira.html";
+            }
+          });
+      }
+
+      // Login com Google
+      document
+        .getElementById("login-btn")
+        .addEventListener("click", function () {
+          var nome = document.getElementById("jogadorNome").value;
+          var tipo = document.getElementById("jogadorTipo").value;
+          if (nome && tipo) {
+            var provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).then(function (result) {
+              currentUser = result.user;
+              registrarJogador(currentUser);
+            });
+          } else {
+            alert("Por favor, preencha todos os campos.");
+          }
+        });
+
+      // Observador de estado de autenticação
+      auth.onAuthStateChanged(function (user) {
+        if (user) {
+          currentUser = user;
+        } else {
+          currentUser = null;
+        }
+      });
+    </script>
+  </body>
+</html>
